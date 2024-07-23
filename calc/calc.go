@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	random "math/rand/v2"
 )
 
 // Equation (3)
-func WeightedAverage(weights []float64, inferences []float64) {
+func WeightedInference(weights []float64, inferences []float64) {
 
 	n := len(weights)
 
@@ -42,7 +43,7 @@ func CreateRandomInts(length int) []int {
 func CreateRandomFloats(length int) []float64 {
 	set := make([]float64, length)
 	for i := 0; i < length; i++ {
-		set[i] = rand.Float64() * 1000
+		set[i] = random.Float64() * 1000
 	}
 	return set
 }

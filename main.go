@@ -17,7 +17,7 @@ func main() {
 
 	fmt.Println(xx)
 
-	calc.Phi()
+	calc.Phi(6.2)
 }
 
 // Equation (1)
