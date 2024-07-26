@@ -2,42 +2,79 @@ package main
 
 import (
 	"fmt"
-	"inference-bots/calc"
+	nw "inference-bots/network"
+	"sort"
 )
 
+var (
+	numWorkers  = 4
+	numEpochs   = 2
+	workerNames = []string{"Ralph", "Bart", "Skinner", "Moe", "Troy", "Barney"}
+)
+
+// first round inferences are made without weight (weight = 1)
+// second round inferences are made with weights from the actual losses (from first round)
+// third round inferences (and beyond) are made with weights from the forecasted losses
+
 func main() {
-	fmt.Println("inference bots engaged")
+	fmt.Println("Inference bots engaged")
 
-	set := calc.CreateRandomFloats(10)
-	fmt.Println(set)
+	n := nw.CreateNetwork(numWorkers, numEpochs, workerNames)
 
-	calc.NaturalLogSet(set)
+	for epoch := 0; epoch < numEpochs; epoch++ {
 
-	xx := calc.Log(100)
+		truth := n.Reputer.GetTruth(epoch)
 
-	fmt.Println(xx)
+		for _, worker := range n.Workers {
+			if epoch == 0 {
+				worker.MakeRandomInference(epoch)
+			} else {
+				n.CollectForecasts(worker, epoch)
+				worker.MakeContextualInference(epoch)
+			}
+		}
 
-	calc.Phi(6.2)
+		n.CalculateNetworkInference(epoch) // naive or weighted depending on epoch
+		n.CalculateNetworkLoss(epoch)
+		n.CalculateWorkerLossesAndRegrets(epoch)
+		n.NormalizeWorkerRegrets(epoch)
+		n.AssignWeights(epoch)
+
+		//
+		// Sort and print results
+		//
+
+		workers := n.Workers
+		sort.Slice(workers, func(i, j int) bool {
+			return workers[i].Weight > workers[j].Weight
+		})
+
+		fmt.Println("")
+		fmt.Printf("Epoch Round %d \n", epoch+1)
+		fmt.Printf("Truth: %v \n", truth)
+		for _, worker := range workers {
+			fmt.Printf("%s: Inference: %v Loss: %v Regret: %v Weight: %v \n",
+				worker.Name,
+				worker.Inferences[epoch],
+				worker.Losses[epoch],
+				worker.NormalizedRegrets[epoch],
+				worker.Weight,
+			)
+		}
+
+		fmt.Println("")
+		fmt.Println("Network")
+		fmt.Printf("Truth: %v \n", truth)             // avg of worker inferences
+		fmt.Printf("Inferences: %v \n", n.Inferences) // avg of worker inferences
+		fmt.Printf("Losses: %v \n", n.Losses)         // network losses
+		fmt.Println("")
+	}
 }
 
-// Equation (1)
-// Inference = Model(Data)
-
-// Equation (2)
-// log Loss = Model(Data)
-
-// Equation (3)
-// Inference =
-// sum of weights * inferences
-// sum of weights
-
-// Equation (4)
-// Regret = log Loss[i]-1 — log Loss[ijk]
-
-// Equation (6)
-// O[p,c](x) = ln [1 + e^p(x-c)]
-
-// Equation (7)
-// O'[p,c](x) =
-// p
-//
+func normalizeTest() {
+	test := []float64{1.0, 3.0, 5.0, 7.0, 8.0, 9.0, 10.2}
+	testSD := nw.Sd(test)
+	fmt.Println("sd: ", testSD)
+	allNormalized := nw.NormalizeSet(test, testSD)
+	fmt.Println(allNormalized)
+}
