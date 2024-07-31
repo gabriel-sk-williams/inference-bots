@@ -1,11 +1,11 @@
-package network
+package calc
 
 import (
 	"math"
 )
 
 var (
-	precision = 10.0 // for rounding
+	precision = 1000.0 // for rounding
 )
 
 func Sum(floats []float64) float64 {
@@ -53,6 +53,8 @@ func Round(num float64) float64 {
 	return (math.Round(num*precision) / precision)
 }
 
+/*
 func RoundCustom(num float64, magnitude float64) float64 {
 	return (math.Round(num*magnitude) / magnitude)
 }
+*/

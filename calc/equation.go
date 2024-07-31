@@ -1,6 +1,7 @@
-package network
+package calc
 
 import (
+	"fmt"
 	"math"
 )
 
@@ -25,24 +26,36 @@ func Loss(x float64, hatx float64) float64 {
 	return Round(loss)
 }
 
-// Equation (4)
-// Regret = log Loss[i-1] — log Loss[ijk]
-func Regret(networkLoss float64, forecastedLosses float64) float64 {
-	minuend := Log(networkLoss)
-	subtrahend := Log(forecastedLosses)
-	return minuend - subtrahend
+// Equation (3)
+// The losses forecasted by workers during the forecasting tasks
+// reflect how accurate worker k expects the inference I(ij)
+// to be, given the contextual information D(ijk). The forecasted losses are
+// used to obtain the forecast-implied inference of the topic’s
+// target variable through a weighted average:
+func GetWeightedInference(weights []float64, inference float64) float64 {
+
+	fmt.Println("calculating weighted inference...")
+	fmt.Println("base inference: ", inference)
+
+	weightedInferences := make([]float64, len(weights))
+
+	for i, weight := range weights {
+		fmt.Println("weight: ", weight)
+		weightedInferences[i] = weight * inference
+	}
+
+	fmt.Println(weightedInferences)
+	fmt.Println(weights)
+	fmt.Println("")
+	sumWeightedInferences := Sum(weightedInferences)
+	sumWeights := Sum(weights)
+
+	result := sumWeightedInferences / sumWeights
+	return Round(result)
 }
 
-// Equation (5)
-// weight = potential_function(Regret[ijk])
-// TODO this equation is still unclear but we'll figure it out
-func Weight(x float64, regret float64) float64 {
-	return Phi(x) * regret
-}
-
-// Equation (6)
-// Phi is a gradient descent function for defining weights
-// ln [1 + e^p(x-c)]
+// Equation (6) // not used!
+// Phi is a gradient descent function whose differential is used in Equation (7)
 func Phi(x float64) float64 {
 	exp := p * (x - c)
 	addend := math.Pow(e, exp)
@@ -56,23 +69,12 @@ func PhiPrime(x float64) float64 {
 	exp := neg(p * (x - c))
 	divisor := math.Pow(e, exp) + 1
 	result := p / divisor
-	return RoundCustom(result, 1000.0)
+	return result
 }
 
 // Equation (8)
 // the standard deviation of the forecasted regrets
 // restricts ˆRijk to values in relative proximity to zero.
-func RegretGradient(inferences []float64, regret float64) float64 {
-
-	// TODO this equation is still unclear but we'll figure it out
-	// sd of inferences? j = worker
-	// ...indicates take the standard deviation over all j ∈ {1,...,N(i)}
-	// ∈ "is an element of" "belongs to"
-	divisor := Sd(inferences) * regret * epsilon
-
-	return regret / divisor
-}
-
 func NormalizeRegret(regret float64, sd float64) float64 {
 	divisor := sd + epsilon
 	normal := regret / divisor

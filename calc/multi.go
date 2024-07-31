@@ -1,4 +1,4 @@
-package network
+package calc
 
 import "fmt"
 
